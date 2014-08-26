@@ -64,13 +64,15 @@ class User(db.Model):
     __tablename__ = 'users'
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(50), unique=True)
+    group = db.Column(db.String(50), unique=False)
     passwd = db.Column(db.String(120), unique=False)
     email = db.Column(db.String(120), unique=True)
     is_manager = db.Column(db.Boolean, unique=False, default=False)
     managed_by = db.Column(db.Integer, unique=False)
 
-    def __init__(self, name=None, passwd=None, email=None, is_manager=False, managed_by=None):
+    def __init__(self, name=None, group=None, passwd=None, email=None, is_manager=False, managed_by=None):
         self.name = name
+        self.group = group
         self.email = email
         self.passwd = passwd
         self.is_manager = is_manager
@@ -134,4 +136,28 @@ class Config(db.Model):
 
     def __repr__(self):
         return '<Config %r>' % (self.name)
+
+class Event(db.Model):
+    __tablename__ = 'events'
+    id = db.Column(db.Integer, primary_key=True)
+    user = db.Column(db.Integer, unique=False)
+    action = db.Column(db.String(50), unique=False)
+    cluster = db.Column(db.Integer, unique=False)
+    group = db.Column(db.Integer, unique=False)
+    switch = db.Column(db.Integer, unique=False)
+    node = db.Column(db.Integer, unique=False)
+    iso = db.Column(db.Integer, unique=False)
+
+    def __init__(self, user=None, action=None, cluster=None, group=None, switch=None, node=None, iso=None ):
+        self.user = user
+        self.action = action
+        self.cluster = cluster
+        self.group = group
+        self.switch = switch
+        self.node = node
+        self.iso = iso
+
+    def __repr__(self):
+        return '<Action %r>' % (self.action)
+
 
