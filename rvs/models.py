@@ -1,4 +1,13 @@
-from rvs import db
+from random import SystemRandom
+
+from backports.pbkdf2 import compare_digest,pbkdf2_hmac
+from flask.ext.login import UserMixin
+from sqlalchemy.ext.hybrid import hybrid_property
+from flask.ext.sqlalchemy import SQLAlchemy
+from rvs import app
+
+db = SQLAlchemy(app)
+
 
 class Node(db.Model):
     __tablename__ = 'nodes'
@@ -60,27 +69,45 @@ class Vlan(db.Model):
     def __repr__(self):
         return 'Vlan %r>' % (self.id)
 
-class User(db.Model):
+class User(UserMixin, db.Model):
     __tablename__ = 'users'
     id = db.Column(db.Integer, primary_key=True)
-    name = db.Column(db.String(50), unique=True)
-    group = db.Column(db.String(50), unique=False)
-    passwd = db.Column(db.String(120), unique=False)
+    username = db.Column(db.String(50), unique=True)
+    group = db.Column(db.String(50))
+    _passwd = db.Column(db.LargeBinary(120))
+    _salt = db.Column(db.String(120))
     email = db.Column(db.String(120), unique=True)
-    is_manager = db.Column(db.Boolean, unique=False, default=False)
-    managed_by = db.Column(db.Integer, unique=False)
+    is_manager = db.Column(db.Boolean, default=False)
+    managed_by = db.Column(db.Integer)
 
-    def __init__(self, name=None, group=None, passwd=None, email=None, is_manager=False, managed_by=None):
-        self.name = name
-        self.group = group
-        self.email = email
-        self.passwd = passwd
-        self.is_manager = is_manager
-        self.managed_by = managed_by
+    @hybrid_property
+    def password(self):
+        return self._passwd
+
+    @password.setter
+    def password(self, value):
+        if self._salt is None:
+            self._salt = bytes(SystemRandom().getrandbits(128))
+        self._passwd = self._hash_password(value)
+
+    def is_valid_password(self, password):
+        new_hash = self._hash_password(password)
+        return compare_digest(new_hash, self._passwd)
+
+    def _hash_password(self, password):
+        pwd = password.encode("utf-8")
+        salt = bytes(self._salt)
+        buff = pbkdf2_hmac("sha512", pwd, salt, iterations=100000)
+        return bytes(buff)
+   
+    def is_authenticated(self):
+        return True
+
+    def is_active(self):
+        return True
 
     def __repr__(self):
-        return '<User %r>' % (self.name)
-
+        return '<Uid#{:d}>'.format(self.id)
 
 class Cluster(db.Model):
     __tablename__ = 'clusters'

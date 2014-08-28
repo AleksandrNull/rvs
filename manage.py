@@ -1,14 +1,17 @@
-from rvs import app,db,models 
 from flask.ext.script import Manager, Command
 from flask.ext.migrate import Migrate, MigrateCommand
-
+from rvs.models import db
+from rvs import app,models
 
 class Init_App(Command):
     def run(self):
         db.create_all()
-        u = models.User(name="admin",passwd="admin")
+        u = models.User(username="admin",password="admin")
+        db.session.add(u)
+        u = models.User(username="test",password="test")
         db.session.add(u)
         db.session.commit()
+
 
 migrate = Migrate(app, db)
 

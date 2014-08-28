@@ -1,8 +1,9 @@
 <!doctype html>
 <HEAD> Reservation system </HEAD>
-<form action="" method="post">
-<p>Login <input type=text name=username>
-<p>Password <input type=password name=password>
+<form action="/login" method="post">
+<p>{{ form.csrf_token }}
+<p>{{ form.username.label }} {{ form.username(size=20) }}
+<p>{{ form.password.label }} {{ form.password(size=20) }}
 <p><input type=submit value=Login>
 </form>
 

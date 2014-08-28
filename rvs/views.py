@@ -1,37 +1,65 @@
-from flask import Flask, render_template, request, session, escape, abort, redirect, url_for
-from rvs import app, db, models
+from flask import Blueprint, flash, render_template, request, session, escape, abort, redirect, url_for, jsonify
+from flask.ext.login import login_user, logout_user, current_user, login_required
 
+from models import User,Vlan,Switch,Cluster,Event,Iso,Node
+from rvs import app
+from forms import LoginForm
+from flask.ext.login import LoginManager
+
+lm = LoginManager()
+lm.init_app(app)
+lm.login_view = "login"
+lm.session_protection = "strong"
+
+
+@lm.user_loader
+def load_user(user_id):
+    return User.query.filter_by(username=user_id).first()
 
 @app.route('/')
-def index(name=None):
-    if 'username' in session:
-        return render_template('main.html',user=session['username']) 
-    return redirect(url_for('login')) 
+def index():
+    return "Hello anonymous!"
 
-@app.route('/desk/<dept>')
-def dept(dept):
-    if 'username' in session:
-        return render_template(dept+".html")
-    return redirect(url_for('login'))
+@app.route('/desk')
+@login_required
+def desk():
+    return render_template('desk.html',user=session['user_id']) 
+
+@app.route('/api/users', methods = ['GET'])
+@login_required
+def get_users():
+     return jsonify(json_list = User.query.all())
+
+@app.route('/api/users/<user>', methods = ['GET'])
+@login_required
+def get_user():
+     return jsonify(json_list = User.query.filter_by(username=user))
+
+
+@app.route('/desk/users')
+@login_required
+def Users():
+     return render_template('users.html',data=User.query.all())
+
+
+#@app.route('/desk/<dept>')
+#@login_required
+#def dept(dept):
+#    datapost = 
+#    return render_template(dept+".html")
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
-    if request.method == 'POST':
-        if valid_user(request.form['username'],request.form['password']):
-        	session['username'] = request.form['username']
-        	return redirect(url_for('index'))
-        else:
-            error = 'Invalid username/password'
-    return render_template('login.html') 
+    form = LoginForm()
+    if form.validate_on_submit():
+        login_user(form.user)
+        flash("Logged in successfully.")
+        session['user_id'] = form.user.username 
+        return redirect(url_for("desk"))
+    return render_template('login.html', form = form)
 
 @app.route('/logout')
 def logout():
-    # remove the username from the session if it's there
-    session.pop('username', None)
+    logout_user()
     return redirect(url_for('index'))
     
-def valid_user(user,passwd):
-    if models.User.query.filter(models.User.name == user, models.User.passwd == passwd).count()==1:
-    	return True
-    return False
-
