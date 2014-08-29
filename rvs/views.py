@@ -1,8 +1,10 @@
+import json
 from flask import Blueprint, flash, render_template, request, session, escape, abort, redirect, url_for, jsonify
 from flask.ext.login import login_user, logout_user, current_user, login_required
 
 from models import User,Vlan,Switch,Cluster,Event,Iso,Node
 from rvs import app
+from rvs.models import db
 from forms import LoginForm
 from flask.ext.login import LoginManager
 
@@ -25,28 +27,56 @@ def index():
 def desk():
     return render_template('desk.html',user=session['user_id']) 
 
+@app.route('/api/users', methods = ['PUT'])
+def update_user():
+    if not (request.json or 'username' in request.json):
+        return jsonify( {'result': False } ), 401
+
+    user = User.query.filter_by(username=request.json['username']).first()
+    db.session.add(user.from_json(request.get_json()))
+    db.session.commit()
+    return "OK", 201
+
+
+@app.route('/api/users', methods = ['POST'])
+def create_user():
+    if not (request.json or request.json.viewkeys() & {'username', 'password'}):
+        return jsonify( { 'result': False } ), 401
+
+    user = User()
+    db.session.add(user.from_json(request.get_json()))
+    db.session.commit()
+    return "OK", 201
+
+@app.route('/api/users', methods = ['DELETE'])
+def delete_user():
+    if not (request.json or 'username' in request.json):
+	return jsonify( {'result': False } ), 401
+
+    user = User.query.filter_by(username=request.json['username']).first()
+    db.session.delete(user)
+    db.session.commit()
+    return jsonify( { 'result': True } ) 
+
 @app.route('/api/users', methods = ['GET'])
 @login_required
 def get_users():
-     return jsonify(json_list = User.query.all())
+     cols = ['username', 'email', 'group', 'is_manager', 'managed_by']
+     result = [{col: getattr(d, col) for col in cols} for d in User.query.all()]
+     return jsonify( users = result  )
 
 @app.route('/api/users/<user>', methods = ['GET'])
 @login_required
-def get_user():
-     return jsonify(json_list = User.query.filter_by(username=user))
-
+def get_user(user):
+     cols = ['username', 'email', 'group', 'is_manager', 'managed_by']
+     result = [{col: getattr(d, col) for col in cols} for d in User.query.filter_by(username=user)]
+     return jsonify( user = result )
 
 @app.route('/desk/users')
 @login_required
 def Users():
      return render_template('users.html',data=User.query.all())
 
-
-#@app.route('/desk/<dept>')
-#@login_required
-#def dept(dept):
-#    datapost = 
-#    return render_template(dept+".html")
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():

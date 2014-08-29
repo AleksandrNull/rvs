@@ -79,6 +79,7 @@ class User(UserMixin, db.Model):
     email = db.Column(db.String(120), unique=True)
     is_manager = db.Column(db.Boolean, default=False)
     managed_by = db.Column(db.Integer)
+    allowed_fields = [ 'username', 'group', 'password', 'email', 'is_manager', 'managed_by' ]
 
     @hybrid_property
     def password(self):
@@ -108,6 +109,12 @@ class User(UserMixin, db.Model):
 
     def __repr__(self):
         return '<Uid#{:d}>'.format(self.id)
+
+    def from_json(self,data):
+        for f in self.allowed_fields:
+            if f in data:
+                setattr(self,f,data[f])
+        return self
 
 class Cluster(db.Model):
     __tablename__ = 'clusters'
