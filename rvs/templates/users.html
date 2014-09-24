@@ -1,22 +1,54 @@
-<H1>USERS</H1>
-{% block body %}
-  <table>
-    <tr>
-        <td>Username</td>
-        <td>Group</td>
-        <td>E-mail</td>
-        <td>Manager right</td>
-        <td>Manager</td>
-    </tr>
+<html>
+        <head>
+                <script src="http://ajax.googleapis.com/ajax/libs/jquery/1.9.1/jquery.min.js"></script>
+                <script src="http://192.168.1.148/editablegrid-2.0.1.js"></script>
+		<link rel="stylesheet" href="http://192.168.1.148/editablegrid-2.0.1.css" type="text/css" media="screen">
+		
+		<style>
+			body { font-family:'lucida grande', tahoma, verdana, arial, sans-serif; font-size:11px; }
+			h1 { font-size: 15px; }
+			a { color: #548dc4; text-decoration: none; }
+			a:hover { text-decoration: underline; }
+			table.testgrid { border-collapse: collapse; border: 1px solid #CCB; width: 800px; }
+			table.testgrid td, table.testgrid th { padding: 5px; border: 1px solid #E0E0E0; }
+			table.testgrid th { background: #E5E5E5; text-align: left; }
+			input.invalid { background: red; color: #FDFDFD; }
+		</style>
+		
+		<script>
+			window.onload = function() {
+				editableGrid = new EditableGrid("DemoGridJSON"); 
+				editableGrid.tableLoaded = function() { this.renderGrid("tablecontent", "testgrid"); };
+				editableGrid.loadJSON("/api/users");
+				editableGrid.modelChanged = function(rowIndex, columnIndex, oldValue, newValue) {
+                                    data = {};
+                                    data["id"]= editableGrid.getRowId(rowIndex);
+				    data[editableGrid.getColumnName(columnIndex)] = newValue ;
+				    $.ajax({
 
-  {% for user in data %}
-    <tr>
-        <td>{{ user.username }}</td>
-	<td>{{ user.group }}</td>
-        <td>{{ user.email }}</td>
-        <td>{{ user.is_manager }}</td>
-        <td>{{ user.managed_by }}</td>
-    </tr>
-  {% endfor %}
-  </table>
-{% endblock %}
+                                        url: "/api/users",
+                                        type: 'PUT',
+                                        dataType: "json",
+                                        contentType: "application/json",
+                                        data: JSON.stringify(data),
+
+                                        success: function (response) {
+                                        // reset old value if failed
+                                        if (response.result != true) editableGrid.setValueAt(rowIndex, columnIndex, oldValue);
+                                        // here you could also highlight the updated row to give the user some feedback
+                                        },
+
+                                        error: function(XMLHttpRequest, textStatus, exception) {
+                                            alert(XMLHttpRequest.responseText);
+                                        }
+                                    });
+                                };
+                        };
+                </script>
+        </head>
+        <body>
+		<h1>Users</h1> 
+		<div id="tablecontent"></div>
+                <br><h3><a href="/desk">Back to main menu</a></h3>
+	</body>
+<html>
