@@ -1,0 +1,68 @@
+<html>
+        <head>
+                <script src="http://ajax.googleapis.com/ajax/libs/jquery/1.9.1/jquery.min.js"></script>
+                <script src="http://192.168.1.148/editablegrid-2.0.1.js"></script>
+		<link rel="stylesheet" href="http://192.168.1.148/editablegrid-2.0.1.css" type="text/css" media="screen">
+		
+		<style>
+			body { font-family:'lucida grande', tahoma, verdana, arial, sans-serif; font-size:11px; }
+			h1 { font-size: 15px; }
+			a { color: #548dc4; text-decoration: none; }
+			a:hover { text-decoration: underline; }
+			table.testgrid { border-collapse: collapse; border: 1px solid #CCB; width: 800px; }
+			table.testgrid td, table.testgrid th { padding: 5px; border: 1px solid #E0E0E0; }
+			table.testgrid th { background: #E5E5E5; text-align: left; }
+			input.invalid { background: red; color: #FDFDFD; }
+		</style>
+		
+		<script>
+			// helper function to get path of a demo image
+			function image(relativePath) {
+			    return "http://192.168.1.148:/images/" + relativePath;
+			}
+			window.onload = function() {
+				editableGrid = new EditableGrid("DemoGridJSON"); 
+				editableGrid.tableLoaded = function() { 
+                                    this.setCellRenderer("action", new CellRenderer({render: function(cell, value) {
+			                // this action will remove the row, so first find the ID of the row containing this cell 
+			                var rowId = editableGrid.getRowId(cell.rowIndex);
+			                cell.innerHTML = "<a onclick=\"if (confirm('Are you sure you want to delete this person ? ')) { editableGrid.remove(" + cell.rowIndex + "); editableGrid.renderCharts(); } \" style=\"cursor:pointer\">" + "<img src=\"" + image("delete.png") + "\" border=\"0\" alt=\"delete\" title=\"Delete row\"/></a>";
+			
+			                cell.innerHTML+= "&nbsp;<a onclick=\"editableGrid.duplicate(" + cell.rowIndex + ");\" style=\"cursor:pointer\">" + "<img src=\"" + image("duplicate.png") + "\" border=\"0\" alt=\"duplicate\" title=\"Duplicate row\"/></a>";
+
+				    }})); 
+                                    this.renderGrid("tablecontent", "testgrid"); };
+				editableGrid.loadJSON("/api/{{ data }}");
+				editableGrid.modelChanged = function(rowIndex, columnIndex, oldValue, newValue) {
+                                    data = {};
+                                    data["id"]= editableGrid.getRowId(rowIndex);
+				    data[editableGrid.getColumnName(columnIndex)] = newValue ;
+				    $.ajax({
+
+                                        url: "/api/{{ data }}",
+                                        type: 'PUT',
+                                        dataType: "json",
+                                        contentType: "application/json",
+                                        data: JSON.stringify(data),
+
+                                        success: function (response) {
+                                        // reset old value if failed
+                                        if (response.result != true) editableGrid.setValueAt(rowIndex, columnIndex, oldValue);
+                                        // here you could also highlight the updated row to give the user some feedback
+                                        },
+
+                                        error: function(XMLHttpRequest, textStatus, exception) {
+                                            alert(XMLHttpRequest.responseText);
+                                        }
+                                    });
+                                };
+                        };
+                </script>
+        </head>
+        <body>
+		<h1>{{ data.title() }}</h1> 
+		<div id="tablecontent"></div>
+                <div id="edition"></div>
+                <br><h3><a href="/desk">Back to main menu</a></h3>
+	</body>
+<html>

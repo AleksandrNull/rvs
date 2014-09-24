@@ -1,8 +1,9 @@
 import json
 from flask import Blueprint, flash, render_template, request, session, escape, abort, redirect, url_for, jsonify
 from flask.ext.login import login_user, logout_user, current_user, login_required
+import models
 
-from models import User,Vlan,Switch,Cluster,Event,Iso,Node
+from models import User,Config,Vlan,Switch,Cluster,Event,Iso,Node
 from rvs import app
 from rvs.models import db
 from forms import LoginForm
@@ -13,10 +14,35 @@ lm.init_app(app)
 lm.login_view = "login"
 lm.session_protection = "strong"
 
+def get_handle(obj_name):
+    allowed_dbs = [ "configs","users","clusters","nodes","vlans","switches","events","isos" ]
+
+    if not obj_name in allowed_dbs:
+        return jsonify( {'result': False } ), 401
+
+    db_name=obj_name[:-1].title() if obj_name != "switches" else "Switch"
+    model = getattr(models,db_name)
+    try:
+        cols = getattr(model,"allowed_fields")
+    except:
+        cols = model.__table__.c._data.keys() 
+
+    if 'id' in cols: cols.remove('id')
+
+    db_data = [ {"id":d.id, "values": { col: getattr(d, col) if col != 'password' else '*******' for col in cols}} for d in model.query.all() ]
+
+    meta_res = [{"name": field, "datatype": model.__table__.c[field].info.split("#")[1], "label": model.__table__.c[field].info.split("#")[0], "editable": "True" } for field in cols if field != "password" ]
+
+    if "password" in cols:
+        meta_res += [{"name": "password", "datatype": "string", "label": "Password", "editable": "true" }]
+
+    meta_res += [{"name": "action", "datatype": "html", "label": "", "editable": "false" }]    
+  
+    return jsonify( metadata = meta_res ,data = db_data )
 
 @lm.user_loader
-def load_user(user_id):
-    return User.query.filter_by(username=user_id).first()
+def load_user(username):
+    return User.query.filter_by(username=username).first()
 
 @app.route('/')
 def index():
@@ -29,13 +55,15 @@ def desk():
 
 @app.route('/api/users', methods = ['PUT'])
 def update_user():
-    if not (request.json or 'username' in request.json):
+    if not (request.json or 'id' in request.json):
         return jsonify( {'result': False } ), 401
-
-    user = User.query.filter_by(username=request.json['username']).first()
-    db.session.add(user.from_json(request.get_json()))
+    user = User.query.filter_by(id=request.json['id']).first()
+    if user is None:    
+        return jsonify( {'result': False } ), 401
+    user.from_json(request.get_json())
+    db.session.add(user)
     db.session.commit()
-    return "OK", 201
+    return jsonify( { 'result': True } )
 
 
 @app.route('/api/users', methods = ['POST'])
@@ -46,7 +74,7 @@ def create_user():
     user = User()
     db.session.add(user.from_json(request.get_json()))
     db.session.commit()
-    return "OK", 201
+    return jsonify( { 'result': True } ) 
 
 @app.route('/api/users', methods = ['DELETE'])
 def delete_user():
@@ -58,25 +86,22 @@ def delete_user():
     db.session.commit()
     return jsonify( { 'result': True } ) 
 
-@app.route('/api/users', methods = ['GET'])
+@app.route('/api/<obj>', methods = ['GET'])
 @login_required
-def get_users():
-     cols = ['username', 'email', 'group', 'is_manager', 'managed_by']
-     result = [{col: getattr(d, col) for col in cols} for d in User.query.all()]
-     return jsonify( users = result  )
+def get_obj(obj):
+     return get_handle(obj)
 
 @app.route('/api/users/<user>', methods = ['GET'])
 @login_required
 def get_user(user):
-     cols = ['username', 'email', 'group', 'is_manager', 'managed_by']
-     result = [{col: getattr(d, col) for col in cols} for d in User.query.filter_by(username=user)]
+     cols = User.allowed_fields
+     result = [{col: getattr(d, col) if col != 'password' else '*******' for col in cols} for d in User.query.filter_by(username=user)]
      return jsonify( user = result )
 
-@app.route('/desk/users')
+@app.route('/desk/<equip>')
 @login_required
-def Users():
-     return render_template('users.html',data=User.query.all())
-
+def Users(equip):
+     return render_template('base.html',data=equip)
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
