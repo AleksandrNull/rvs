@@ -1,6 +1,6 @@
 from random import SystemRandom
 
-from backports.pbkdf2 import compare_digest,pbkdf2_hmac
+from passlib.hash import sha256_crypt
 from flask.ext.login import UserMixin
 from sqlalchemy.ext.hybrid import hybrid_property
 from flask.ext.sqlalchemy import SQLAlchemy
@@ -76,7 +76,6 @@ class User(UserMixin, db.Model):
     username = db.Column(db.String(50),info="User name#string",unique=True)
     group = db.Column(db.String(50),info="User Group#string")
     _passwd = db.Column(db.LargeBinary(120))
-    _salt = db.Column(db.String(120))
     email = db.Column(db.String(120), info="E-mail#email",unique=True)
     is_manager = db.Column(db.Boolean, info="Manager#boolean",default=False)
     managed_by = db.Column(db.Integer, info="Under Management of#integer")
@@ -88,20 +87,14 @@ class User(UserMixin, db.Model):
 
     @password.setter
     def password(self, value):
-        if self._salt is None:
-            self._salt = bytes(SystemRandom().getrandbits(128))
         self._passwd = self._hash_password(value)
 
     def is_valid_password(self, password):
-        new_hash = self._hash_password(password)
-        return compare_digest(new_hash, self._passwd)
+        return sha256_crypt.verify(password.encode("utf-8"), self._passwd)
 
     def _hash_password(self, password):
-        pwd = password.encode("utf-8")
-        salt = bytes(self._salt)
-        buff = pbkdf2_hmac("sha512", pwd, salt, iterations=100000)
-        return bytes(buff)
-   
+        return sha256_crypt.encrypt(password.encode("utf-8"))
+
     def is_authenticated(self):
         return True
 
@@ -164,10 +157,10 @@ class Config(db.Model):
     creator = db.Column(db.Integer,info="Creator/Owner#integer")
     data = db.Column(db.String(2000),info="Config#string")
 
-#    def __init__(self, name=None, creator=None, date=None):
-#	self.name = name
-#	self.creator = creator
-#        self.data = data
+    def __init__(self, name=None, creator=None, data=None):
+        self.name = name
+        self.creator = creator
+        self.data = data
 
     def __repr__(self):
         return '<Config %r>' % (self.name)
