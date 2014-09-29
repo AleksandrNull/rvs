@@ -55,7 +55,7 @@ def desk():
 
 @app.route('/api/users', methods = ['PUT'])
 def update_user():
-    if not (request.json or 'id' in request.json):
+    if not (request.json and 'id' in request.json):
         return jsonify( {'result': False } ), 401
     user = User.query.filter_by(id=request.json['id']).first()
     if user is None:    
@@ -68,7 +68,7 @@ def update_user():
 
 @app.route('/api/users', methods = ['POST'])
 def create_user():
-    if not (request.json or request.json.viewkeys() & {'username', 'password'}):
+    if not (request.json and request.json.viewkeys() & {'username', 'password'}):
         return jsonify( { 'result': False } ), 401
 
     user = User()
@@ -78,10 +78,12 @@ def create_user():
 
 @app.route('/api/users', methods = ['DELETE'])
 def delete_user():
-    if not (request.json or 'username' in request.json):
-	return jsonify( {'result': False } ), 401
+    if not (request.json and 'id' in request.json):
+        return jsonify( {'result': False } ), 401
+    user = User.query.filter_by(id=request.json['id']).first()
+    if user is None:
+        return jsonify( {'result': False } ), 401
 
-    user = User.query.filter_by(username=request.json['username']).first()
     db.session.delete(user)
     db.session.commit()
     return jsonify( { 'result': True } ) 
