@@ -24,28 +24,32 @@
 
             EditableGrid.prototype.duplicate = function(rowIndex) {
 
-                // get id for new row (max id + 1)
-                var newRowId = 0;
-                for (var r = 0; r < this.getRowCount(); r++) newRowId = Math.max(newRowId, parseInt(this.getRowId(r)) + 1);
+                for (var r = 0; r < this.getRowCount(); r++) {
+                    if (parseInt(this.getRowId(r)) < 0) {
+                        alert("commit previous row first");
+                        return
+                    }
+                }
 
                 // copy values from given row
                 data = this.getRowValues(rowIndex);
                 data['name'] = data['name'] + ' (copy)';
 
                 // add new row
-                this.insertAfter(rowIndex, newRowId, data);
+                this.insertAfter(rowIndex, -1, data);
             };
 
             EditableGrid.prototype.addNewRow = function() {
 
-                // get id for new row (max id + 1)
-                var newRowId = 0;
                 for (var r = 0; r < this.getRowCount(); r++) {
-                    newRowId = Math.max(newRowId, parseInt(this.getRowId(r)) + 1);
+                    if (parseInt(this.getRowId(r)) < 0) {
+                        alert("commit previous row first");
+                        return
+                    }
                 }
 
                 // add new row
-                this.addRow(newRowId, {});
+                this.addRow(-1, {});
             };
 
             EditableGrid.prototype.commit = function(rowIndex) {
@@ -61,10 +65,11 @@
                     data: JSON.stringify(data),
 
                     success: function (response) {
+                        editableGrid.loadJSON("/api/{{ data }}");
                     },
 
                     error: function(XMLHttpRequest, textStatus, exception) {
-                        //alert(XMLHttpRequest.responseText);
+                        alert(XMLHttpRequest.responseText);
                     }
                 });
 
@@ -74,20 +79,22 @@
             EditableGrid.prototype.deleteRow = function(rowIndex) {
                 data = {};
                 data["id"]= editableGrid.getRowId(rowIndex);
-                $.ajax({
-                    url: "/api/{{ data }}",
-                    type: 'DELETE',
-                    dataType: "json",
-                    contentType: "application/json",
-                    data: JSON.stringify(data),
+                if (data["id"] != -1) {
+                    $.ajax({
+                        url: "/api/{{ data }}",
+                        type: 'DELETE',
+                        dataType: "json",
+                        contentType: "application/json",
+                        data: JSON.stringify(data),
 
-                    success: function (response) {
-                    },
+                        success: function (response) {
+                        },
 
-                    error: function(XMLHttpRequest, textStatus, exception) {
-                        //alert(XMLHttpRequest.responseText);
-                    }
-                });
+                        error: function(XMLHttpRequest, textStatus, exception) {
+                            alert(XMLHttpRequest.responseText);
+                        }
+                    });
+                }
                 this.remove(rowIndex)
             };
 
@@ -95,23 +102,25 @@
                 data = {};
                 data["id"]= editableGrid.getRowId(rowIndex);
                 data[editableGrid.getColumnName(columnIndex)] = newValue ;
-                $.ajax({
-                    url: "/api/{{ data }}",
-                    type: 'PUT',
-                    dataType: "json",
-                    contentType: "application/json",
-                    data: JSON.stringify(data),
+                if (data["id"] != -1) {
+                    $.ajax({
+                        url: "/api/{{ data }}",
+                        type: 'PUT',
+                        dataType: "json",
+                        contentType: "application/json",
+                        data: JSON.stringify(data),
 
-                    success: function (response) {
-                    // reset old value if failed
-                    //if (response.result != true) editableGrid.setValueAt(rowIndex, columnIndex, oldValue);
-                    // here you could also highlight the updated row to give the user some feedback
-                    },
+                        success: function (response) {
+                        // reset old value if failed
+                        //if (response.result != true) editableGrid.setValueAt(rowIndex, columnIndex, oldValue);
+                        // here you could also highlight the updated row to give the user some feedback
+                        },
 
-                    error: function(XMLHttpRequest, textStatus, exception) {
-                        //alert(XMLHttpRequest.responseText);
-                    }
-                });
+                        error: function(XMLHttpRequest, textStatus, exception) {
+                            //alert(XMLHttpRequest.responseText);
+                        }
+                    });
+                }
             };
 
 			window.onload = function() {
@@ -122,8 +131,12 @@
                         var rowId = editableGrid.getRowId(cell.rowIndex);
                         cell.innerHTML = "<a onclick=\"if (confirm('Are you sure you want to delete this person ? ')) { editableGrid.deleteRow(" + cell.rowIndex + "); editableGrid.renderCharts(); } \" style=\"cursor:pointer\">" + "<img src=\"" + image("delete.png") + "\" border=\"0\" alt=\"delete\" title=\"Delete row\"/></a>";
 
-                        cell.innerHTML+= "&nbsp;<a onclick=\"editableGrid.duplicate(" + cell.rowIndex + ");\" style=\"cursor:pointer\">" + "<img src=\"" + image("duplicate.png") + "\" border=\"0\" alt=\"duplicate\" title=\"Duplicate row\"/></a>";
-                        cell.innerHTML+= "&nbsp;<a onclick=\"editableGrid.commit(" + cell.rowIndex + ");\" style=\"cursor:pointer\">" + "<img src=\"" + image("golast.png") + "\" border=\"0\" alt=\"duplicate\" title=\"Commit\"/></a>";
+                        if (rowId>=0) {
+                            cell.innerHTML+= "&nbsp;<a onclick=\"editableGrid.duplicate(" + cell.rowIndex + ");\" style=\"cursor:pointer\">" + "<img src=\"" + image("duplicate.png") + "\" border=\"0\" alt=\"duplicate\" title=\"Duplicate row\"/></a>";
+                        }
+                        if (rowId<0) {
+                            cell.innerHTML+= "&nbsp;<a onclick=\"editableGrid.commit(" + cell.rowIndex + ");\" style=\"cursor:pointer\">" + "<img src=\"" + image("golast.png") + "\" border=\"0\" alt=\"duplicate\" title=\"Commit\"/></a>";
+                        }
 				    }}));
                     this.renderGrid("tablecontent", "testgrid");
                 };
