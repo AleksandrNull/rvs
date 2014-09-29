@@ -36,8 +36,8 @@ def get_handle(obj_name):
     if "password" in cols:
         meta_res += [{"name": "password", "datatype": "string", "label": "Password", "editable": "true" }]
 
-    meta_res += [{"name": "action", "datatype": "html", "label": "", "editable": "false" }]    
-  
+    meta_res += [{"name": "action", "datatype": "html", "label": "", "editable": "false" }]
+
     return jsonify( metadata = meta_res ,data = db_data )
 
 @lm.user_loader
