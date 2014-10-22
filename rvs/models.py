@@ -188,4 +188,13 @@ class Event(db.Model):
     def __repr__(self):
         return '<Action %r>' % (self.action)
 
+class Task(db.Model):
+    __tablename__ = 'tasks'
+    id = db.Column(db.Integer, primary_key=True)
+    user = db.Column(db.Integer, info="User#integer")
+    action = db.Column(db.String(50), info="Action#string")
+    params = db.Column(db.String(1000), info="Params#string")
+    status = db.Column(db.String(50), info="Status#string")
 
+    def __repr__(self):
+        return '<Task %s>' % (self.action)

@@ -7,6 +7,7 @@ from models import User,Config,Vlan,Switch,Cluster,Event,Iso,Node
 from rvs import app
 from rvs.models import db
 from forms import LoginForm
+from forms import ReserveForm
 from flask.ext.login import LoginManager
 
 lm = LoginManager()
@@ -15,7 +16,7 @@ lm.login_view = "login"
 lm.session_protection = "strong"
 
 def get_handle(obj_name):
-    allowed_dbs = [ "configs","users","clusters","nodes","vlans","switches","events","isos" ]
+    allowed_dbs = [ "configs","users","clusters","nodes","vlans","switches","events","isos","tasks"]
 
     if not obj_name in allowed_dbs:
         return jsonify( {'result': False } ), 401
@@ -36,7 +37,7 @@ def get_handle(obj_name):
     if "password" in cols:
         meta_res += [{"name": "password", "datatype": "string", "label": "Password", "editable": "true" }]
 
-    meta_res += [{"name": "action", "datatype": "html", "label": "", "editable": "false" }]
+    meta_res += [{"name": "actions", "datatype": "html", "label": "", "editable": "false" }]
 
     return jsonify( metadata = meta_res ,data = db_data )
 
@@ -119,4 +120,3 @@ def login():
 def logout():
     logout_user()
     return redirect(url_for('index'))
-    

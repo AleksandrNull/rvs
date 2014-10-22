@@ -1,11 +1,11 @@
 from sqlalchemy.orm.exc import MultipleResultsFound, NoResultFound
 from flask.ext.wtf import Form
 from .models import User
-from wtforms import TextField,PasswordField
+from wtforms import StringField,PasswordField
 from wtforms.validators import InputRequired,ValidationError
 
 class LoginForm(Form):
-    username = TextField('Username', validators = [InputRequired()])
+    username = StringField('Username', validators = [InputRequired()])
     password = PasswordField('Password', validators = [InputRequired()])
 
     def validate_password(form, field):
@@ -17,3 +17,6 @@ class LoginForm(Form):
             raise ValidationError("Invalid password")
 
         form.user = user
+
+class ReserveForm(Form):
+    count = StringField('Count', validators = [InputRequired()])
